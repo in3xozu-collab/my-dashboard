@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인사 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --purple: #6D3FE0;
+    --purple-soft: #E3D9FB;
+    --purple-faint: #F6F2FE;
+    --red: #E03E3E;
+    --ink: #16181D;
+    --sub: #6B7280;
+    --line: #E6E8EC;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #fff; color: var(--ink);
+    font-feature-settings: "tnum"; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 24px 56px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .updated { font-size: 13px; color: var(--sub); }
+
+  /* 카드 */
+  .kpis { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .kpi { border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .kpi.main { background: var(--purple-faint); border-color: var(--purple-soft); }
+  .kpi .label { font-size: 14px; color: var(--sub); margin-bottom: 10px; }
+  .kpi .value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .kpi.main .value { font-size: 44px; color: var(--purple); }
+  .kpi .unit { font-size: 15px; font-weight: 500; margin-left: 3px; color: var(--sub); }
+  .kpi .note { font-size: 13px; color: var(--sub); margin-top: 8px; }
+  .flow { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .flow span { font-size: 14px; background: #fff; border: 1px solid var(--purple-soft); border-radius: 99px; padding: 4px 12px; }
+  .flow b { font-weight: 700; margin-left: 4px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; margin-top: 10px; }
+  .badge.ok { background: var(--purple-faint); color: var(--purple); }
+  .badge.bad { background: #FDEDED; color: var(--red); }
+  .up { color: var(--purple); font-weight: 700; } .down { color: var(--red); font-weight: 700; }
+
+  /* 패널 */
+  .grid2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid2.even { grid-template-columns: 1fr 1fr; }
+  .panel { border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; }
+  .panel h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  svg { width: 100%; height: auto; display: block; }
+
+  /* 도넛 */
+  .donut-wrap { display: grid; grid-template-columns: 180px 1fr; gap: 20px; align-items: center; }
+  .legend { list-style: none; }
+  .legend li { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .legend li:last-child { border-bottom: none; }
+  .legend i { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .legend .nm { flex: 1; }
+  .legend .ct { font-weight: 700; }
+  .legend .pc { color: var(--sub); width: 48px; text-align: right; }
+  .turnover { margin-top: 14px; padding: 12px 14px; background: var(--purple-faint); border-radius: 10px; display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+  .turnover b { font-size: 20px; color: var(--purple); }
+  .turnover b.bad { color: var(--red); }
+
+  /* 표 */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 500; color: var(--sub); font-size: 13px; padding: 0 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 12px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th.r, td.r { text-align: right; }
+  th.c, td.c { text-align: center; }
+  tfoot td { font-weight: 700; border-bottom: none; }
+  .dept-table { min-width: 380px; }
+  .bar-cell { width: 40%; min-width: 90px; }
+  .track { height: 10px; background: var(--purple-faint); border-radius: 99px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--purple-soft); border-radius: 99px; transition: width .8s ease; }
+  tbody tr:first-child .fill { background: var(--purple); }
+
+  /* 히트맵 */
+  .heat { min-width: 360px; border-collapse: separate; border-spacing: 4px; }
+  .heat th, .heat td { border-bottom: none; }
+  .heat th { padding: 0 4px 6px; text-align: center; }
+  .heat th:first-child { text-align: left; }
+  .heat td { text-align: center; border-radius: 8px; padding: 13px 4px; font-weight: 700; }
+  .heat td.dept { text-align: left; font-weight: 500; padding-left: 0; }
+  .heat-note { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--sub); margin-top: 12px; justify-content: flex-end; }
+  .heat-note .scale { width: 90px; height: 8px; border-radius: 99px; background: linear-gradient(90deg, #F6F2FE, #6D3FE0); }
+
+  .error { display: none; border: 1px solid #F3C7C7; background: #FFF6F6; color: #A12A2A; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.6; }
+
+  @media (max-width: 900px) {
+    .kpis { grid-template-columns: 1fr 1fr; }
+    .kpi.main { grid-column: 1 / -1; }
+    .grid2, .grid2.even { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .wrap { padding: 20px 14px 40px; }
+    .kpi { padding: 16px; }
+    .kpi .value { font-size: 21px; }
+    .kpi.main .value { font-size: 36px; }
+    .donut-wrap { grid-template-columns: 1fr; }
+    .donut-wrap svg { max-width: 200px; margin: 0 auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>인사 대시보드</h1>
+    <div class="updated" id="updated">불러오는 중…</div>
+  </header>
+
+  <div class="error" id="error"></div>
+
+  <section class="kpis">
+    <div class="kpi main">
+      <div class="label" id="lbl-month">재직 인원</div>
+      <div class="value"><span id="k-head">-</span><span class="unit">명</span></div>
+      <div class="flow">
+        <span>입사<b id="k-join">-</b></span>
+        <span>퇴사<b id="k-left">-</b></span>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="label">인건비 비중</div>
+      <div class="value"><span id="k-ratio">-</span><span class="unit">%</span></div>
+      <div id="k-ratio-badge"></div>
+      <div class="note">인건비 ÷ 매출</div>
+    </div>
+    <div class="kpi">
+      <div class="label">이직률</div>
+      <div class="value"><span id="k-turn">-</span><span class="unit">%</span></div>
+      <div id="k-turn-badge"></div>
+      <div class="note" id="k-turn-note">-</div>
+    </div>
+    <div class="kpi">
+      <div class="label">1인당 매출</div>
+      <div class="value"><span id="k-per">-</span><span class="unit" data-unit></span></div>
+      <div class="note" id="k-per-note">-</div>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel">
+      <h2>월별 재직 인원</h2>
+      <div id="monthly"></div>
+    </div>
+    <div class="panel">
+      <h2>근속 분포</h2>
+      <div class="donut-wrap">
+        <div id="donut"></div>
+        <ul class="legend" id="legend"></ul>
+      </div>
+      <div class="turnover"><span id="turn-label">이직률</span><b id="turn-big">-</b></div>
+    </div>
+  </section>
+
+  <section class="grid2 even">
+    <div class="panel">
+      <h2>부서별 인건비</h2>
+      <div class="table-wrap">
+        <table class="dept-table">
+          <thead><tr><th>부서</th><th>인건비</th><th class="r">금액</th><th class="r">인원</th></tr></thead>
+          <tbody id="dept-body"></tbody>
+          <tfoot id="dept-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>부서별 월 초과근무</h2>
+      <div class="table-wrap">
+        <table class="heat" id="heat"></table>
+      </div>
+      <div class="heat-note">적음<span class="scale"></span>많음</div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ===== 여기만 바꾸면 됩니다 =====
+  const SUPABASE_URL = "https://ojfigmrwjvkasumervem.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_0qeJ15OWdwKIHmdASANDDQ_lDOcv6hs";
+  const UNIT = "만원";          // 금액 단위
+  const RATIO_LIMIT = 35;       // 인건비 비중 기준선 (%)
+  const TURNOVER_TARGET = 12;   // 이직률 목표 (%)
+  // ===============================
+
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const PURPLE = "#6D3FE0", SOFT = "#E3D9FB", INK = "#16181D", SUB = "#6B7280", RED = "#E03E3E";
+  const BUCKETS = ["0h", "1-10", "11-20", "21-30", "30h+"];
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n) => Number(n).toLocaleString("ko-KR", { maximumFractionDigits: 1 });
+  const pct = (n) => (Math.round(n * 10) / 10).toFixed(1);
+  document.querySelectorAll("[data-unit]").forEach(el => el.textContent = UNIT);
+
+  function showError(msg) {
+    $("error").style.display = "block";
+    $("error").innerHTML = msg;
+    $("updated").textContent = "불러오지 못함";
+  }
+
+  async function load() {
+    try {
+      const [m, d, t, o] = await Promise.all([
+        db.from("hr_monthly").select("*").order("sort_order", { ascending: true }),
+        db.from("hr_dept").select("*").order("payroll", { ascending: false }),
+        db.from("hr_tenure").select("*").order("sort_order", { ascending: true }),
+        db.from("hr_overtime").select("*")
+      ]);
+      const err = m.error || d.error || t.error || o.error;
+      if (err) throw err;
+      if (!m.data.length) { showError("hr_monthly 테이블에 데이터가 없습니다."); return; }
+      render(m.data, d.data, t.data, o.data);
+      $("updated").textContent = new Date().toLocaleString("ko-KR") + " 기준";
+    } catch (e) {
+      showError("데이터를 불러오지 못했습니다.<br>연결 주소·키, 테이블 보안 설정(read 정책)을 확인하세요.<br><small>" + (e.message || e) + "</small>");
+    }
+  }
+
+  function render(monthly, dept, tenure, overtime) {
+    const cur = monthly[monthly.length - 1];
+    const prev = monthly.length > 1 ? monthly[monthly.length - 2] : null;
+
+    // 이직률: 최근 12개월 (데이터가 12개월보다 적으면 있는 만큼)
+    const last12 = monthly.slice(-12);
+    const leftSum = last12.reduce((a, b) => a + Number(b.left_count), 0);
+    const avgHead = last12.reduce((a, b) => a + Number(b.headcount), 0) / last12.length;
+    const turnover = avgHead ? (leftSum / avgHead) * 100 : 0;
+    const turnOk = turnover <= TURNOVER_TARGET;
+    const periodText = last12.length >= 12 ? "최근 12개월" : "최근 " + last12.length + "개월";
+
+    // 카드 1
+    $("lbl-month").textContent = cur.month + " 재직 인원";
+    $("k-head").textContent = fmt(cur.headcount);
+    $("k-join").textContent = cur.joined + "명";
+    $("k-left").textContent = cur.left_count + "명";
+
+    // 카드 2: 인건비 비중
+    const ratio = cur.revenue ? (cur.payroll / cur.revenue) * 100 : 0;
+    $("k-ratio").textContent = pct(ratio);
+    $("k-ratio-badge").innerHTML = ratio <= RATIO_LIMIT
+      ? `<span class="badge ok">기준 ${RATIO_LIMIT}% 이하</span>`
+      : `<span class="badge bad">기준 ${RATIO_LIMIT}% 초과</span>`;
+    if (ratio > RATIO_LIMIT) $("k-ratio").style.color = RED;
+
+    // 카드 3: 이직률
+    $("k-turn").textContent = pct(turnover);
+    $("k-turn-badge").innerHTML = turnOk
+      ? `<span class="badge ok">목표 ${TURNOVER_TARGET}% 이내</span>`
+      : `<span class="badge bad">목표 ${TURNOVER_TARGET}% 초과</span>`;
+    if (!turnOk) $("k-turn").style.color = RED;
+    $("k-turn-note").textContent = periodText + " 퇴사 " + leftSum + "명 ÷ 평균 " + pct(avgHead) + "명";
+
+    // 카드 4: 1인당 매출
+    const per = cur.headcount ? cur.revenue / cur.headcount : 0;
+    $("k-per").textContent = fmt(Math.round(per * 10) / 10);
+    if (prev && prev.headcount) {
+      const pp = prev.revenue / prev.headcount;
+      const dlt = per - pp, dr = pp ? (dlt / pp) * 100 : 0;
+      const sign = dlt > 0 ? "▲ " : dlt < 0 ? "▼ " : "";
+      $("k-per-note").innerHTML = `전월 대비 <span class="${dlt >= 0 ? "up" : "down"}">${sign}${fmt(Math.abs(Math.round(dlt * 10) / 10))}${UNIT} (${pct(Math.abs(dr))}%)</span>`;
+    } else {
+      $("k-per-note").textContent = "전월 데이터 없음";
+    }
+
+    // 도넛 옆 이직률
+    $("turn-label").textContent = "이직률 (" + periodText + ")";
+    $("turn-big").textContent = pct(turnover) + "%";
+    if (!turnOk) $("turn-big").classList.add("bad");
+
+    drawMonthly(monthly);
+    drawDonut(tenure);
+    drawDept(dept);
+    drawHeat(overtime);
+  }
+
+  // 월별 재직 인원 막대
+  function drawMonthly(data) {
+    const W = 600, H = 290, padL = 36, padR = 12, padT = 26, padB = 34;
+    const cw = W - padL - padR, ch = H - padT - padB;
+    const maxV = Math.ceil(Math.max(...data.map(d => d.headcount)) * 1.15);
+    const y = (v) => padT + ch - (v / maxV) * ch;
+    const slot = cw / data.length, bw = Math.min(slot * 0.56, 56);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 재직 인원 막대그래프">`;
+    for (let i = 0; i <= 4; i++) {
+      const v = (maxV / 4) * i, yy = y(v);
+      s += `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" stroke="#E6E8EC"/>`;
+      s += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#9AA0A8">${Math.round(v)}</text>`;
+    }
+    data.forEach((d, i) => {
+      const last = i === data.length - 1;
+      const x = padL + slot * i + (slot - bw) / 2, top = y(d.headcount);
+      s += `<rect x="${x}" y="${top}" width="${bw}" height="${padT + ch - top}" rx="5" fill="${last ? PURPLE : SOFT}"/>`;
+      s += `<text x="${x + bw / 2}" y="${top - 7}" text-anchor="middle" font-size="13" font-weight="${last ? 700 : 500}" fill="${last ? PURPLE : SUB}">${d.headcount}명</text>`;
+      s += `<text x="${x + bw / 2}" y="${H - 12}" text-anchor="middle" font-size="13" fill="${last ? INK : SUB}" font-weight="${last ? 700 : 400}">${d.month}</text>`;
+    });
+    s += `</svg>`;
+    $("monthly").innerHTML = s;
+  }
+
+  // 근속 분포 도넛 (보라 한 가지 색의 진하기로 구분)
+  function drawDonut(data) {
+    const total = data.reduce((a, b) => a + Number(b.count), 0);
+    const shades = ["#4A22B8", "#6D3FE0", "#A88BF0", "#D9CCFA", "#EFE9FD"];
+    const cx = 90, cy = 90, R = 72, sw = 26, C = 2 * Math.PI * R;
+    let s = `<svg viewBox="0 0 180 180" role="img" aria-label="근속 분포 도넛">`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#F2F3F5" stroke-width="${sw}"/>`;
+    let offset = 0;
+    data.forEach((d, i) => {
+      const len = total ? (d.count / total) * C : 0;
+      s += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${shades[i % shades.length]}" stroke-width="${sw}"
+              stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+      offset += len;
+    });
+    s += `<text x="${cx}" y="${cy + 2}" text-anchor="middle" font-size="34" font-weight="700" fill="${INK}">${total}</text>`;
+    s += `<text x="${cx}" y="${cy + 24}" text-anchor="middle" font-size="12" fill="${SUB}">총 인원(명)</text>`;
+    s += `</svg>`;
+    $("donut").innerHTML = s;
+    $("legend").innerHTML = data.map((d, i) => `
+      <li><i style="background:${shades[i % shades.length]}"></i>
+        <span class="nm">${d.bucket}</span><span class="ct">${d.count}명</span>
+        <span class="pc">${total ? pct((d.count / total) * 100) : 0}%</span></li>`).join("");
+  }
+
+  // 부서별 인건비 표
+  function drawDept(list) {
+    if (!list.length) { $("dept-body").innerHTML = `<tr><td colspan="4" style="color:${SUB}">데이터가 없습니다.</td></tr>`; return; }
+    const max = Math.max(...list.map(d => d.payroll)) || 1;
+    $("dept-body").innerHTML = list.map(d => `
+      <tr><td>${d.dept}</td>
+        <td class="bar-cell"><div class="track"><div class="fill" data-w="${(d.payroll / max) * 100}"></div></div></td>
+        <td class="r">${fmt(d.payroll)}${UNIT}</td>
+        <td class="r">${d.headcount}명</td></tr>`).join("");
+    const tp = list.reduce((a, b) => a + Number(b.payroll), 0), th = list.reduce((a, b) => a + Number(b.headcount), 0);
+    $("dept-foot").innerHTML = `<tr><td colspan="2">합계</td><td class="r">${fmt(tp)}${UNIT}</td><td class="r">${th}명</td></tr>`;
+    requestAnimationFrame(() => document.querySelectorAll("#dept-body .fill").forEach(f => f.style.width = f.dataset.w + "%"));
+  }
+
+  // 초과근무 히트맵
+  function drawHeat(list) {
+    if (!list.length) { $("heat").innerHTML = `<tr><td style="color:${SUB}">데이터가 없습니다.</td></tr>`; return; }
+    const depts = [...new Set(list.map(d => d.dept))];
+    const get = (dp, b) => { const r = list.find(x => x.dept === dp && x.bucket === b); return r ? Number(r.count) : 0; };
+    const max = Math.max(...list.map(d => Number(d.count))) || 1;
+    let h = `<thead><tr><th>부서</th>${BUCKETS.map(b => `<th>${b}</th>`).join("")}</tr></thead><tbody>`;
+    depts.forEach(dp => {
+      h += `<tr><td class="dept">${dp}</td>`;
+      BUCKETS.forEach(b => {
+        const v = get(dp, b), t = v / max;
+        const bg = `rgba(109, 63, 224, ${0.06 + t * 0.94})`;
+        h += `<td style="background:${bg};color:${t > 0.5 ? "#fff" : INK}">${v}</td>`;
+      });
+      h += `</tr>`;
+    });
+    $("heat").innerHTML = h + `</tbody>`;
+  }
+
+  load();
+</script>
+</body>
+</html>
