@@ -1,1 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>손익 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --green: #12A150;
+    --green-soft: #CFEFDC;
+    --green-faint: #F1FAF4;
+    --red: #E03E3E;
+    --gray: #B8BDC6;
+    --gray-soft: #F2F3F5;
+    --ink: #16181D;
+    --sub: #6B7280;
+    --line: #E6E8EC;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #fff; color: var(--ink);
+    font-feature-settings: "tnum"; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 24px 56px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .updated { font-size: 13px; color: var(--sub); }
 
+  /* 카드 */
+  .kpis { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .kpi { border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .kpi.main { background: var(--green-faint); border-color: var(--green-soft); }
+  .kpi .label { font-size: 14px; color: var(--sub); margin-bottom: 10px; }
+  .kpi .value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .kpi.main .value { font-size: 40px; color: var(--green); }
+  .kpi .unit { font-size: 15px; font-weight: 500; margin-left: 3px; color: var(--sub); }
+  .kpi .note { font-size: 13px; color: var(--sub); margin-top: 8px; }
+  .kpi .note b { font-weight: 700; }
+  .up { color: var(--red); } .down { color: var(--green); }
+  .progress { height: 8px; background: var(--green-soft); border-radius: 99px; margin-top: 14px; overflow: hidden; }
+  .progress > div { height: 100%; width: 0; background: var(--green); border-radius: 99px; transition: width .8s ease; }
+  .progress-text { display: flex; justify-content: space-between; font-size: 13px; color: var(--sub); margin-top: 6px; }
+  .progress-text b { color: var(--green); }
+
+  /* 패널 */
+  .grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid2.even { grid-template-columns: 1fr 1fr; }
+  .panel { border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; }
+  .panel h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .panel h2 small { font-size: 13px; font-weight: 400; color: var(--sub); margin-left: 6px; }
+  svg { width: 100%; height: auto; display: block; }
+
+  /* 게이지 */
+  .gauge-info { text-align: center; margin-top: 8px; }
+  .gauge-info .big { font-size: 34px; font-weight: 700; color: var(--green); }
+  .gauge-info .big.bad { color: var(--red); }
+  .gauge-info .row { display: flex; justify-content: space-between; font-size: 14px; padding: 10px 0; border-top: 1px solid var(--line); margin-top: 12px; text-align: left; }
+  .gauge-info .row + .row { margin-top: 0; }
+  .gauge-info .row span { color: var(--sub); }
+  .gauge-info .row b { font-weight: 700; }
+
+  /* 표 */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 340px; }
+  th { text-align: left; font-weight: 500; color: var(--sub); font-size: 13px; padding: 0 8px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 8px; border-bottom: 1px solid var(--line); }
+  th.r, td.r { text-align: right; }
+  tfoot td { font-weight: 700; border-bottom: none; }
+  .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; }
+  .tag.fixed { background: var(--gray-soft); color: var(--sub); }
+  .tag.var { background: var(--green-faint); color: var(--green); border: 1px solid var(--green-soft); }
+  .share { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .share i { display: inline-block; height: 6px; background: var(--gray); border-radius: 99px; }
+
+  /* 공헌이익률 */
+  .margin-row { display: grid; grid-template-columns: 76px 1fr 52px; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 14px; }
+  .margin-row .val { text-align: right; font-weight: 700; }
+  .margin-row .val.neg { color: var(--red); }
+  .axis { position: relative; height: 18px; }
+  .axis .zero { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--ink); opacity: .35; }
+  .axis .bar { position: absolute; top: 0; height: 100%; border-radius: 4px; transition: width .8s ease, left .8s ease; width: 0; }
+
+  .error { display: none; border: 1px solid #F3C7C7; background: #FFF6F6; color: #A12A2A; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.6; }
+
+  @media (max-width: 900px) {
+    .kpis { grid-template-columns: 1fr 1fr; }
+    .kpi.main { grid-column: 1 / -1; }
+    .grid2, .grid2.even { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .wrap { padding: 20px 14px 40px; }
+    .kpi { padding: 16px; }
+    .kpi .value { font-size: 21px; }
+    .kpi.main .value { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>손익 대시보드</h1>
+    <div class="updated" id="updated">불러오는 중…</div>
+  </header>
+
+  <div class="error" id="error"></div>
+
+  <section class="kpis">
+    <div class="kpi main">
+      <div class="label" id="lbl-month">이번 달 영업이익</div>
+      <div class="value"><span id="k-op">-</span><span class="unit" data-unit></span></div>
+      <div class="progress"><div id="k-bar"></div></div>
+      <div class="progress-text"><span id="k-op-goal">목표 대비 달성률</span><b id="k-op-rate">-</b></div>
+    </div>
+    <div class="kpi">
+      <div class="label">영업이익률</div>
+      <div class="value"><span id="k-opm">-</span><span class="unit">%</span></div>
+      <div class="note" id="k-opm-note">-</div>
+    </div>
+    <div class="kpi">
+      <div class="label">손익분기 달성률</div>
+      <div class="value"><span id="k-bep">-</span><span class="unit">%</span></div>
+      <div class="note">매출 ÷ 총비용</div>
+    </div>
+    <div class="kpi">
+      <div class="label">총비용</div>
+      <div class="value"><span id="k-cost">-</span><span class="unit" data-unit></span></div>
+      <div class="note" id="k-cost-note">-</div>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel">
+      <h2>손익 구조 <small id="wf-month"></small></h2>
+      <div id="waterfall"></div>
+    </div>
+    <div class="panel">
+      <h2>손익분기 달성률</h2>
+      <div id="gauge"></div>
+      <div class="gauge-info" id="gauge-info"></div>
+    </div>
+  </section>
+
+  <section class="grid2 even">
+    <div class="panel">
+      <h2>비용 순위</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>항목</th><th>구분</th><th class="r">금액</th><th class="r">비중</th></tr></thead>
+          <tbody id="cost-body"></tbody>
+          <tfoot id="cost-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>상품별 공헌이익률</h2>
+      <div id="margin"></div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ===== 여기만 바꾸면 됩니다 =====
+  const SUPABASE_URL = "https://ojfigmrwjvkasumervem.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_0qeJ15OWdwKIHmdASANDDQ_lDOcv6hs";
+  const UNIT = "만원";        // 금액 단위
+  const OP_TARGET = 1100;     // 영업이익 목표 (만원)
+  const OPM_TARGET = 12;      // 영업이익률 목표 (%)
+  // ===============================
+
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const GREEN = "#12A150", GRAY = "#B8BDC6", RED = "#E03E3E", INK = "#16181D", SUB = "#6B7280";
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n) => Number(n).toLocaleString("ko-KR", { maximumFractionDigits: 1 });
+  const pct = (n) => (Math.round(n * 10) / 10).toFixed(1);
+  document.querySelectorAll("[data-unit]").forEach(el => el.textContent = UNIT);
+
+  function showError(msg) {
+    $("error").style.display = "block";
+    $("error").innerHTML = msg;
+    $("updated").textContent = "불러오지 못함";
+  }
+
+  async function load() {
+    try {
+      const [s, c, m] = await Promise.all([
+        db.from("pl_summary").select("*").order("sort_order", { ascending: true }),
+        db.from("pl_cost").select("*").order("amount", { ascending: false }),
+        db.from("pl_margin").select("*").order("margin_rate", { ascending: false })
+      ]);
+      const err = s.error || c.error || m.error;
+      if (err) throw err;
+      if (!s.data.length) { showError("pl_summary 테이블에 데이터가 없습니다."); return; }
+      render(s.data, c.data, m.data);
+      $("updated").textContent = new Date().toLocaleString("ko-KR") + " 기준";
+    } catch (e) {
+      showError("데이터를 불러오지 못했습니다.<br>연결 주소·키, 테이블 보안 설정(read 정책)을 확인하세요.<br><small>" + (e.message || e) + "</small>");
+    }
+  }
+
+  // 계산
+  function calc(r) {
+    const totalCost = r.cogs + r.sga + r.other_cost;
+    const op = r.revenue - totalCost;
+    return {
+      ...r, totalCost, op,
+      opm: r.revenue ? (op / r.revenue) * 100 : 0,
+      bep: totalCost ? (r.revenue / totalCost) * 100 : 0
+    };
+  }
+
+  function render(summary, cost, margin) {
+    const rows = summary.map(calc);
+    const cur = rows[rows.length - 1];
+    const prev = rows.length > 1 ? rows[rows.length - 2] : null;
+
+    // 카드 1: 영업이익
+    $("lbl-month").textContent = cur.month + " 영업이익";
+    $("k-op").textContent = fmt(cur.op);
+    $("k-op").style.color = cur.op < 0 ? RED : "";
+    const opRate = OP_TARGET ? (cur.op / OP_TARGET) * 100 : 0;
+    $("k-op-goal").textContent = "목표 " + fmt(OP_TARGET) + UNIT + " 대비";
+    $("k-op-rate").textContent = pct(opRate) + "%";
+    requestAnimationFrame(() => $("k-bar").style.width = Math.max(0, Math.min(opRate, 100)) + "%");
+
+    // 카드 2: 영업이익률
+    $("k-opm").textContent = pct(cur.opm);
+    const gap = OPM_TARGET - cur.opm;
+    $("k-opm-note").innerHTML = gap > 0
+      ? "목표 " + OPM_TARGET + "%까지 <b class='up'>" + pct(gap) + "%p 부족</b>"
+      : "목표 " + OPM_TARGET + "% <b class='down'>" + pct(-gap) + "%p 초과</b>";
+
+    // 카드 3: 손익분기 달성률
+    $("k-bep").textContent = pct(cur.bep);
+
+    // 카드 4: 총비용
+    $("k-cost").textContent = fmt(cur.totalCost);
+    if (prev) {
+      const d = cur.totalCost - prev.totalCost;
+      const dr = prev.totalCost ? (d / prev.totalCost) * 100 : 0;
+      const cls = d > 0 ? "up" : "down";
+      const sign = d > 0 ? "▲ " : d < 0 ? "▼ " : "";
+      $("k-cost-note").innerHTML = "전월 대비 <b class='" + cls + "'>" + sign + fmt(Math.abs(d)) + UNIT + " (" + pct(Math.abs(dr)) + "%)</b>";
+    } else {
+      $("k-cost-note").textContent = "전월 데이터 없음";
+    }
+
+    drawWaterfall(cur);
+    drawGauge(cur);
+    drawCost(cost);
+    drawMargin(margin);
+  }
+
+  // 폭포 그래프
+  function drawWaterfall(r) {
+    $("wf-month").textContent = r.month;
+    const steps = [
+      { label: "매출",     from: 0,                               to: r.revenue,                                   kind: "total" },
+      { label: "매출원가", from: r.revenue,                       to: r.revenue - r.cogs,                          kind: "cost", v: r.cogs },
+      { label: "판관비",   from: r.revenue - r.cogs,              to: r.revenue - r.cogs - r.sga,                  kind: "cost", v: r.sga },
+      { label: "기타비용", from: r.revenue - r.cogs - r.sga,      to: r.op,                                        kind: "cost", v: r.other_cost },
+      { label: "영업이익", from: 0,                               to: r.op,                                        kind: "result" }
+    ];
+    const W = 600, H = 320, padL = 48, padR = 12, padT = 28, padB = 36;
+    const cw = W - padL - padR, ch = H - padT - padB;
+    const maxV = r.revenue * 1.08;
+    const minV = Math.min(0, r.op) * 1.2;
+    const y = (v) => padT + ((maxV - v) / (maxV - minV)) * ch;
+    const slot = cw / steps.length, bw = Math.min(slot * 0.6, 70);
+
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="손익 구조 폭포 그래프">`;
+    for (let i = 0; i <= 4; i++) {
+      const v = minV + ((maxV - minV) / 4) * i, yy = y(v);
+      s += `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" stroke="#E6E8EC"/>`;
+      s += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#9AA0A8">${fmt(Math.round(v))}</text>`;
+    }
+    s += `<line x1="${padL}" x2="${W - padR}" y1="${y(0)}" y2="${y(0)}" stroke="${INK}" stroke-opacity=".35"/>`;
+
+    steps.forEach((st, i) => {
+      const x = padL + slot * i + (slot - bw) / 2;
+      const top = y(Math.max(st.from, st.to)), bot = y(Math.min(st.from, st.to));
+      const color = st.kind === "cost" ? GRAY : (st.kind === "result" && r.op < 0 ? RED : GREEN);
+      s += `<rect x="${x}" y="${top}" width="${bw}" height="${Math.max(bot - top, 1)}" rx="4" fill="${color}"/>`;
+      // 연결선
+      if (i < steps.length - 1) {
+        const nx = padL + slot * (i + 1) + (slot - bw) / 2;
+        s += `<line x1="${x + bw}" x2="${nx}" y1="${y(st.to)}" y2="${y(st.to)}" stroke="${SUB}" stroke-dasharray="3 3"/>`;
+      }
+      const txt = st.kind === "cost" ? "−" + fmt(st.v) : fmt(st.to);
+      const tc = st.kind === "cost" ? SUB : color;
+      s += `<text x="${x + bw / 2}" y="${top - 7}" text-anchor="middle" font-size="12" font-weight="700" fill="${tc}">${txt}</text>`;
+      s += `<text x="${x + bw / 2}" y="${H - 12}" text-anchor="middle" font-size="13" fill="${st.kind === "cost" ? SUB : INK}" font-weight="${st.kind === "cost" ? 400 : 700}">${st.label}</text>`;
+    });
+    s += `</svg>`;
+    $("waterfall").innerHTML = s;
+  }
+
+  // 반원 게이지 (0~150%)
+  function drawGauge(r) {
+    const MAX = 150, cx = 160, cy = 160, R = 120, sw = 22;
+    const pt = (p, rad) => {
+      const a = Math.PI * (1 - p / MAX);
+      return [cx + rad * Math.cos(a), cy - rad * Math.sin(a)];
+    };
+    const arc = (p1, p2, rad) => {
+      const [x1, y1] = pt(p1, rad), [x2, y2] = pt(p2, rad);
+      return `M ${x1} ${y1} A ${rad} ${rad} 0 0 1 ${x2} ${y2}`;
+    };
+    const v = Math.max(0, Math.min(r.bep, MAX));
+    const ok = r.bep >= 100;
+
+    let s = `<svg viewBox="0 0 320 196" role="img" aria-label="손익분기 달성률 게이지">`;
+    s += `<path d="${arc(0, MAX, R)}" fill="none" stroke="#F2F3F5" stroke-width="${sw}"/>`;
+    if (v > 0) s += `<path d="${arc(0, v, R)}" fill="none" stroke="${ok ? GREEN : RED}" stroke-width="${sw}"/>`;
+    // 눈금
+    for (let t = 0; t <= MAX; t += 25) {
+      const [x1, y1] = pt(t, R + sw / 2 + 2), [x2, y2] = pt(t, R + sw / 2 + 8), [tx, ty] = pt(t, R + sw / 2 + 20);
+      const isBep = t === 100;
+      s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isBep ? INK : "#9AA0A8"}" stroke-width="${isBep ? 2 : 1}"/>`;
+      s += `<text x="${tx}" y="${ty + 4}" text-anchor="middle" font-size="11" fill="${isBep ? INK : "#9AA0A8"}" font-weight="${isBep ? 700 : 400}">${t}</text>`;
+    }
+    // 100% 기준선
+    const [bx1, by1] = pt(100, R - sw / 2 - 2), [bx2, by2] = pt(100, R + sw / 2 + 2);
+    s += `<line x1="${bx1}" y1="${by1}" x2="${bx2}" y2="${by2}" stroke="${INK}" stroke-width="2"/>`;
+    // 바늘
+    const [nx, ny] = pt(v, R - sw / 2 - 10);
+    s += `<line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="7" fill="${INK}"/>`;
+    s += `<text x="${cx}" y="${cy + 30}" text-anchor="middle" font-size="12" fill="${SUB}">100 = 손익분기점</text>`;
+    s += `</svg>`;
+    $("gauge").innerHTML = s;
+
+    const diff = r.revenue - r.totalCost;
+    $("gauge-info").innerHTML = `
+      <div class="big ${ok ? "" : "bad"}">${pct(r.bep)}%</div>
+      <div class="row"><span>손익분기점 매출 (= 총비용)</span><b>${fmt(r.totalCost)}${UNIT}</b></div>
+      <div class="row"><span>현재 매출</span><b>${fmt(r.revenue)}${UNIT}</b></div>
+      <div class="row"><span>${diff >= 0 ? "손익분기점 초과" : "손익분기점까지 부족"}</span><b style="color:${diff >= 0 ? GREEN : RED}">${fmt(Math.abs(diff))}${UNIT}</b></div>`;
+  }
+
+  // 비용 순위 표
+  function drawCost(list) {
+    const total = list.reduce((a, b) => a + Number(b.amount), 0) || 1;
+    $("cost-body").innerHTML = list.map(d => {
+      const share = (d.amount / total) * 100;
+      const tag = d.cost_type === "변동" ? `<span class="tag var">변동</span>` : `<span class="tag fixed">${d.cost_type}</span>`;
+      return `<tr>
+        <td>${d.item}</td><td>${tag}</td>
+        <td class="r">${fmt(d.amount)}${UNIT}</td>
+        <td class="r"><div class="share"><i style="width:${share * 0.6}px"></i>${pct(share)}%</div></td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="4" style="color:${SUB}">데이터가 없습니다.</td></tr>`;
+    $("cost-foot").innerHTML = `<tr><td colspan="2">합계</td><td class="r">${fmt(total)}${UNIT}</td><td class="r">100%</td></tr>`;
+  }
+
+  // 공헌이익률 가로 막대 (0 기준 좌우)
+  function drawMargin(list) {
+    if (!list.length) { $("margin").innerHTML = `<p style="color:${SUB};font-size:14px">데이터가 없습니다.</p>`; return; }
+    const vals = list.map(d => Number(d.margin_rate));
+    const maxPos = Math.max(0, ...vals), maxNeg = Math.abs(Math.min(0, ...vals));
+    const span = (maxPos + maxNeg) || 1;
+    const zero = (maxNeg / span) * 100;   // 0 위치 (%)
+
+    $("margin").innerHTML = list.map(d => {
+      const v = Number(d.margin_rate), neg = v < 0;
+      const w = (Math.abs(v) / span) * 100;
+      const left = neg ? zero - w : zero;
+      return `<div class="margin-row">
+        <span>${d.product}</span>
+        <div class="axis">
+          <div class="bar" data-w="${w}" style="left:${neg ? zero : left}%;background:${neg ? RED : GREEN}" data-left="${left}"></div>
+          <div class="zero" style="left:${zero}%"></div>
+        </div>
+        <span class="val ${neg ? "neg" : ""}">${v > 0 ? "+" : ""}${fmt(v)}%</span>
+      </div>`;
+    }).join("");
+    requestAnimationFrame(() => document.querySelectorAll("#margin .bar").forEach(b => {
+      b.style.left = b.dataset.left + "%";
+      b.style.width = b.dataset.w + "%";
+    }));
+  }
+
+  load();
+</script>
+</body>
+</html>
